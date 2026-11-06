@@ -34,28 +34,40 @@ export async function POST(request: Request) {
     return Response.json({ reply: "AI assistant configure nahi hua hai. Admin se GEMINI_API_KEY set karwayein." }, { status: 503 });
   }
 
-  const [{ data: profile }, { data: linkedStudents, error: studentsError }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role").eq("id", user.id).maybeSingle(),
-    supabase.from("students").select("id").or(`profile_id.eq.${user.id},guardian_id.eq.${user.id}`),
-  ]);
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles").select("full_name, role").eq("id", user.id).maybeSingle();
 
-  if (studentsError) {
-    return Response.json({ reply: "School records abhi load nahi ho paaye." }, { status: 503 });
+  if (profileError) {
+    return Response.json({ reply: "Account details abhi load nahi ho paaye." }, { status: 503 });
   }
 
-  const studentIds = (linkedStudents ?? []).map(student => student.id);
+  // Never use broad staff RLS access as AI context. Only student/parent accounts
+  // may load records, and the query is limited to rows linked to this user.
   let fees: unknown[] = [];
   let attendance: unknown[] = [];
+  if (profile?.role === "student" || profile?.role === "parent") {
+    const { data: linkedStudents, error: studentsError } = await supabase
+      .from("students").select("id")
+      .or(`profile_id.eq.${user.id},guardian_id.eq.${user.id}`);
 
-  if (studentIds.length > 0) {
-    const [{ data: feeRows }, { data: attendanceRows }] = await Promise.all([
-      supabase.from("fee_invoices").select("title, amount, status, due_date")
-        .in("student_id", studentIds).limit(20),
-      supabase.from("attendance").select("date, status")
-        .in("student_id", studentIds).order("date", { ascending: false }).limit(30),
-    ]);
-    fees = feeRows ?? [];
-    attendance = attendanceRows ?? [];
+    if (studentsError) {
+      return Response.json({ reply: "School records abhi load nahi ho paaye." }, { status: 503 });
+    }
+
+    const studentIds = (linkedStudents ?? []).map(student => student.id);
+    if (studentIds.length > 0) {
+      const [{ data: feeRows, error: feesError }, { data: attendanceRows, error: attendanceError }] = await Promise.all([
+        supabase.from("fee_invoices").select("title, amount, status, due_date")
+          .in("student_id", studentIds).limit(20),
+        supabase.from("attendance").select("date, status")
+          .in("student_id", studentIds).order("date", { ascending: false }).limit(30),
+      ]);
+      if (feesError || attendanceError) {
+        return Response.json({ reply: "School records abhi load nahi ho paaye." }, { status: 503 });
+      }
+      fees = feeRows ?? [];
+      attendance = attendanceRows ?? [];
+    }
   }
 
   try {
