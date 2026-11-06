@@ -4,13 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import ChatWidget from "@/components/ChatWidget";
 
 const NAV: Record<string, [string, string][]> = {
-  admin: [["Overview", "/dashboard"], ["Students", "#"], ["Fees", "#"], ["Hostel", "#"], ["Staff", "#"]],
-  principal: [["Overview", "/dashboard"], ["Attendance", "#"], ["Results", "#"]],
-  teacher: [["Overview", "/dashboard"], ["Mark attendance", "#"], ["Homework", "#"], ["Marks", "#"]],
-  student: [["Overview", "/dashboard"], ["Timetable", "#"], ["Fees", "#"], ["Outpass", "#"]],
-  parent: [["Overview", "/dashboard"], ["Attendance", "#"], ["Fees", "#"], ["Approve outpass", "#"]],
-  warden: [["Overview", "/dashboard"], ["Room map", "#"], ["Outpass", "#"], ["Visitors", "#"], ["Complaints", "#"]],
-  accountant: [["Overview", "/dashboard"], ["Invoices", "#"], ["Defaulters", "#"]],
+  admin: [["Overview", "/dashboard"], ["Students", ""], ["Fees", ""], ["Hostel", ""], ["Staff", ""]],
+  principal: [["Overview", "/dashboard"], ["Attendance", ""], ["Results", ""]],
+  teacher: [["Overview", "/dashboard"], ["Mark attendance", ""], ["Homework", ""], ["Marks", ""]],
+  student: [["Overview", "/dashboard"], ["Timetable", ""], ["Fees", ""], ["Outpass", ""]],
+  parent: [["Overview", "/dashboard"], ["Attendance", ""], ["Fees", ""], ["Approve outpass", ""]],
+  warden: [["Overview", "/dashboard"], ["Room map", ""], ["Outpass", ""], ["Visitors", ""], ["Complaints", ""]],
+  accountant: [["Overview", "/dashboard"], ["Invoices", ""], ["Defaulters", ""]],
 };
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -26,7 +26,9 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <nav className="side" aria-label="Main navigation">
         <div className="brand">Vidya Campus</div>
         {(NAV[role] ?? NAV.student).map(([label, href]) => (
-          <Link key={label} href={href}>{label}</Link>
+          href
+            ? <Link key={label} href={href}>{label}</Link>
+            : <span key={label} aria-disabled="true" title="This module is not available yet" style={{ padding: "10px", color: "#8290a2", fontSize: "14px", cursor: "not-allowed" }}>{label} · Coming soon</span>
         ))}
       </nav>
       <main className="main">
